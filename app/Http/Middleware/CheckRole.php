@@ -8,6 +8,14 @@ use Illuminate\Support\Facades\Auth;
 
 class CheckRole
 {
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @param  string  ...$roles
+     * @return mixed
+     */
     public function handle(Request $request, Closure $next, ...$roles)
     {
         if (!Auth::check()) {
@@ -21,7 +29,8 @@ class CheckRole
             return $next($request);
         }
 
-        // Jika tidak punya akses, redirect ke dashboard sesuai role
-        return redirect()->route('admin.dashboard')->with('error', 'Anda tidak memiliki akses ke halaman ini.');
+        // Jika tidak punya akses, redirect ke dashboard dengan pesan error
+        return redirect()->route('admin.dashboard')
+            ->with('error', 'Anda tidak memiliki akses ke halaman ini.');
     }
 }
