@@ -219,11 +219,11 @@
         @endif
         
         <div class="nav-section" style="margin-top: auto;">Akun</div>
-        <a href="{{ route('logout') }}" class="nav-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
-        <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+        <form action="{{ route('logout') }}" method="POST" id="logout-form">
             @csrf
+            <button type="submit" class="nav-link" style="background:none; border:none; color:rgba(255,255,255,0.7); width:100%; text-align:left; padding:12px 25px; cursor:pointer;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
         </form>
     </div>
 
