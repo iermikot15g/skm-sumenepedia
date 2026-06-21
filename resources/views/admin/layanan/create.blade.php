@@ -6,33 +6,16 @@
 @section('content')
 <div class="card-custom">
     <div class="card-body">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Menambahkan layanan untuk unit: <strong>{{ $unit->nama }}</strong>
+        </div>
+
         <form action="{{ route('admin.layanan.store') }}" method="POST">
             @csrf
             
             <div class="mb-4">
-                <label class="form-label">Unit Pelayanan</label>
-                @if(auth()->user()->role == 'admin_unit')
-                    <input type="hidden" name="unit_pelayanan_id" value="{{ auth()->user()->unit_pelayanan_id }}">
-                    <p class="form-control-static">
-                        {{ auth()->user()->unitPelayanan->nama ?? 'Unit tidak ditemukan' }}
-                    </p>
-                @else
-                    <select name="unit_pelayanan_id" class="form-select @error('unit_pelayanan_id') is-invalid @enderror" required>
-                        <option value="">-- Pilih Unit --</option>
-                        @foreach($units as $unit)
-                            <option value="{{ $unit->id }}" {{ old('unit_pelayanan_id') == $unit->id ? 'selected' : '' }}>
-                                {{ $unit->nama }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('unit_pelayanan_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                @endif
-            </div>
-            
-            <div class="mb-4">
-                <label class="form-label">Nama Layanan</label>
+                <label class="form-label">Nama Layanan <span class="text-danger">*</span></label>
                 <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror" 
                        placeholder="Masukkan nama layanan" value="{{ old('nama') }}" required>
                 @error('nama')

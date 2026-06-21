@@ -34,6 +34,9 @@ class LayananController extends Controller
             if ($request->has('unit_id') && $request->unit_id) {
                 $query->where('unit_pelayanan_id', $request->unit_id);
             }
+        } else {
+            // Role lain tidak boleh akses
+            abort(403, 'Unauthorized access.');
         }
         
         $layanan = $query->orderBy('unit_pelayanan_id')->orderBy('nama')->paginate(15);
@@ -44,7 +47,13 @@ class LayananController extends Controller
             $units = UnitPelayanan::where('is_active', true)->get();
         }
         
-        return view('admin.layanan.index', compact('layanan', 'units'));
+        // Untuk Admin Unit, kirimkan unit info
+        $unit = null;
+        if ($user->role == 'admin_unit') {
+            $unit = UnitPelayanan::find($user->unit_pelayanan_id);
+        }
+        
+        return view('admin.layanan.index', compact('layanan', 'units', 'unit'));
     }
 
     /**
@@ -53,19 +62,20 @@ class LayananController extends Controller
     public function create()
     {
         $user = Auth::user();
-        $units = [];
         
-        if ($user->role == 'super_admin') {
-            $units = UnitPelayanan::where('is_active', true)->get();
-        } elseif ($user->role == 'admin_unit') {
-            $unitId = $user->unit_pelayanan_id;
-            if (!$unitId) {
-                return redirect()->back()->with('error', 'Anda belum terhubung dengan unit pelayanan.');
-            }
-            $units = UnitPelayanan::where('id', $unitId)->get();
+        // Hanya admin_unit yang boleh create
+        if ($user->role != 'admin_unit') {
+            abort(403, 'Unauthorized access.');
         }
         
-        return view('admin.layanan.create', compact('units'));
+        $unitId = $user->unit_pelayanan_id;
+        if (!$unitId) {
+            return redirect()->back()->with('error', 'Anda belum terhubung dengan unit pelayanan.');
+        }
+        
+        $unit = UnitPelayanan::find($unitId);
+        
+        return view('admin.layanan.create', compact('unit'));
     }
 
     /**
@@ -75,8 +85,17 @@ class LayananController extends Controller
     {
         $user = Auth::user();
         
+        // Hanya admin_unit yang boleh store
+        if ($user->role != 'admin_unit') {
+            abort(403, 'Unauthorized access.');
+        }
+        
+        $unitId = $user->unit_pelayanan_id;
+        if (!$unitId) {
+            return redirect()->back()->with('error', 'Anda belum terhubung dengan unit pelayanan.');
+        }
+        
         $validator = Validator::make($request->all(), [
-            'unit_pelayanan_id' => 'required|exists:unit_pelayanan,id',
             'nama' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'is_active' => 'nullable|boolean',
@@ -88,21 +107,11 @@ class LayananController extends Controller
                 ->withInput();
         }
         
-        // Validasi akses: Admin Unit hanya bisa membuat untuk unitnya sendiri
-        if ($user->role == 'admin_unit') {
-            $unitId = $user->unit_pelayanan_id;
-            if ($request->unit_pelayanan_id != $unitId) {
-                return redirect()->back()
-                    ->with('error', 'Anda hanya bisa membuat layanan untuk unit Anda sendiri.')
-                    ->withInput();
-            }
-        }
-        
         Layanan::create([
-            'unit_pelayanan_id' => $request->unit_pelayanan_id,
+            'unit_pelayanan_id' => $unitId,
             'nama' => $request->nama,
             'deskripsi' => $request->deskripsi,
-            'is_active' => $request->is_active ?? true,
+            'is_active' => $request->has('is_active'),
         ]);
         
         return redirect()->route('admin.layanan.index')
@@ -116,18 +125,20 @@ class LayananController extends Controller
     {
         $user = Auth::user();
         
-        // Validasi akses: Admin Unit hanya bisa edit layanan unitnya sendiri
-        if ($user->role == 'admin_unit') {
-            $unitId = $user->unit_pelayanan_id;
-            if ($layanan->unit_pelayanan_id != $unitId) {
-                return redirect()->route('admin.layanan.index')
-                    ->with('error', 'Anda tidak memiliki akses untuk mengedit layanan ini.');
-            }
+        // Hanya admin_unit yang boleh edit
+        if ($user->role != 'admin_unit') {
+            abort(403, 'Unauthorized access.');
         }
         
-        $units = UnitPelayanan::where('is_active', true)->get();
+        $unitId = $user->unit_pelayanan_id;
+        if ($layanan->unit_pelayanan_id != $unitId) {
+            return redirect()->route('admin.layanan.index')
+                ->with('error', 'Anda tidak memiliki akses untuk mengedit layanan ini.');
+        }
         
-        return view('admin.layanan.edit', compact('layanan', 'units'));
+        $unit = UnitPelayanan::find($unitId);
+        
+        return view('admin.layanan.edit', compact('layanan', 'unit'));
     }
 
     /**
@@ -137,13 +148,15 @@ class LayananController extends Controller
     {
         $user = Auth::user();
         
-        // Validasi akses: Admin Unit hanya bisa update layanan unitnya sendiri
-        if ($user->role == 'admin_unit') {
-            $unitId = $user->unit_pelayanan_id;
-            if ($layanan->unit_pelayanan_id != $unitId) {
-                return redirect()->route('admin.layanan.index')
-                    ->with('error', 'Anda tidak memiliki akses untuk mengupdate layanan ini.');
-            }
+        // Hanya admin_unit yang boleh update
+        if ($user->role != 'admin_unit') {
+            abort(403, 'Unauthorized access.');
+        }
+        
+        $unitId = $user->unit_pelayanan_id;
+        if ($layanan->unit_pelayanan_id != $unitId) {
+            return redirect()->route('admin.layanan.index')
+                ->with('error', 'Anda tidak memiliki akses untuk mengupdate layanan ini.');
         }
         
         $validator = Validator::make($request->all(), [
@@ -161,7 +174,7 @@ class LayananController extends Controller
         $layanan->update([
             'nama' => $request->nama,
             'deskripsi' => $request->deskripsi,
-            'is_active' => $request->is_active ?? true,
+            'is_active' => $request->has('is_active'),
         ]);
         
         return redirect()->route('admin.layanan.index')
@@ -175,13 +188,18 @@ class LayananController extends Controller
     {
         $user = Auth::user();
         
-        // Validasi akses: Admin Unit hanya bisa hapus layanan unitnya sendiri
+        // Validasi akses
         if ($user->role == 'admin_unit') {
             $unitId = $user->unit_pelayanan_id;
             if ($layanan->unit_pelayanan_id != $unitId) {
                 return redirect()->route('admin.layanan.index')
                     ->with('error', 'Anda tidak memiliki akses untuk menghapus layanan ini.');
             }
+        } elseif ($user->role == 'super_admin') {
+            // Super Admin bisa hapus semua (untuk pengawasan)
+            // Tapi kita tetap kasih peringatan
+        } else {
+            abort(403, 'Unauthorized access.');
         }
         
         // Cek apakah layanan sudah digunakan di survei
@@ -193,8 +211,13 @@ class LayananController extends Controller
         
         $layanan->delete();
         
+        $message = 'Layanan berhasil dihapus.';
+        if ($user->role == 'super_admin') {
+            $message .= ' (Dihapus oleh Super Admin)';
+        }
+        
         return redirect()->route('admin.layanan.index')
-            ->with('success', 'Layanan berhasil dihapus.');
+            ->with('success', $message);
     }
 
     /**
@@ -211,12 +234,16 @@ class LayananController extends Controller
                 return redirect()->route('admin.layanan.index')
                     ->with('error', 'Anda tidak memiliki akses untuk mengubah status layanan ini.');
             }
+        } elseif ($user->role != 'super_admin') {
+            abort(403, 'Unauthorized access.');
         }
         
         $layanan->is_active = !$layanan->is_active;
         $layanan->save();
         
+        $status = $layanan->is_active ? 'diaktifkan' : 'dinonaktifkan';
+        
         return redirect()->route('admin.layanan.index')
-            ->with('success', 'Status layanan berhasil diubah.');
+            ->with('success', "Layanan berhasil {$status}.");
     }
 }

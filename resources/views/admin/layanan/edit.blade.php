@@ -6,19 +6,17 @@
 @section('content')
 <div class="card-custom">
     <div class="card-body">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Mengedit layanan untuk unit: <strong>{{ $unit->nama }}</strong>
+        </div>
+
         <form action="{{ route('admin.layanan.update', $layanan->id) }}" method="POST">
             @csrf
             @method('PUT')
             
             <div class="mb-4">
-                <label class="form-label">Unit Pelayanan</label>
-                <p class="form-control-static">
-                    <strong>{{ $layanan->unitPelayanan->nama }}</strong>
-                </p>
-            </div>
-            
-            <div class="mb-4">
-                <label class="form-label">Nama Layanan</label>
+                <label class="form-label">Nama Layanan <span class="text-danger">*</span></label>
                 <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror" 
                        placeholder="Masukkan nama layanan" value="{{ old('nama', $layanan->nama) }}" required>
                 @error('nama')

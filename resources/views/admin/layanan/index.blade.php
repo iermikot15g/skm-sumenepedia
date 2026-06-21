@@ -7,14 +7,16 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         @if(auth()->user()->role == 'super_admin')
-            <p class="text-muted mb-0">Kelola semua layanan dari seluruh unit pelayanan.</p>
-        @else
-            <p class="text-muted mb-0">Kelola layanan untuk unit Anda.</p>
+            <p class="text-muted mb-0">Lihat semua layanan dari seluruh unit pelayanan.</p>
+        @elseif(auth()->user()->role == 'admin_unit')
+            <p class="text-muted mb-0">Kelola layanan untuk unit <strong>{{ $unit->nama ?? 'Anda' }}</strong>.</p>
         @endif
     </div>
-    <a href="{{ route('admin.layanan.create') }}" class="btn btn-primary-custom">
-        <i class="fas fa-plus me-2"></i>Tambah Layanan
-    </a>
+    @if(auth()->user()->role == 'admin_unit')
+        <a href="{{ route('admin.layanan.create') }}" class="btn btn-primary-custom">
+            <i class="fas fa-plus me-2"></i>Tambah Layanan
+        </a>
+    @endif
 </div>
 
 <!-- Filter untuk Super Admin -->
@@ -26,15 +28,15 @@
                 <label class="form-label">Filter Unit</label>
                 <select name="unit_id" class="form-select" onchange="this.form.submit()">
                     <option value="">-- Semua Unit --</option>
-                    @foreach($units as $unit)
-                        <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
-                            {{ $unit->nama }}
+                    @foreach($units as $unitItem)
+                        <option value="{{ $unitItem->id }}" {{ request('unit_id') == $unitItem->id ? 'selected' : '' }}>
+                            {{ $unitItem->nama }}
                         </option>
                     @endforeach
                 </select>
             </div>
             <div class="col-md-2">
-                <a href="{{ route('admin.layanan.index') }}" class="btn btn-secondary">Reset</a>
+                <a href="{{ route('admin.layanan.index') }}" class="btn btn-outline-secondary w-100">Reset</a>
             </div>
         </form>
     </div>
@@ -73,25 +75,29 @@
                         </td>
                         <td>{{ $item->survei()->count() }}</td>
                         <td>
-                            <a href="{{ route('admin.layanan.edit', $item->id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form action="{{ route('admin.layanan.toggle', $item->id) }}" method="POST" class="d-inline">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="btn btn-sm btn-outline-{{ $item->is_active ? 'warning' : 'success' }}" 
-                                        onclick="return confirm('Ubah status layanan ini?')">
-                                    <i class="fas fa-{{ $item->is_active ? 'times' : 'check' }}"></i>
-                                </button>
-                            </form>
-                            <form action="{{ route('admin.layanan.destroy', $item->id) }}" method="POST" class="d-inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                        onclick="return confirm('Hapus layanan ini?')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                            @if(auth()->user()->role == 'admin_unit')
+                                <a href="{{ route('admin.layanan.edit', $item->id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('admin.layanan.toggle', $item->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-sm btn-outline-{{ $item->is_active ? 'warning' : 'success' }}" 
+                                            onclick="return confirm('Ubah status layanan ini?')">
+                                        <i class="fas fa-{{ $item->is_active ? 'times' : 'check' }}"></i>
+                                    </button>
+                                </form>
+                            @endif
+                            @if(auth()->user()->role == 'super_admin')
+                                <form action="{{ route('admin.layanan.destroy', $item->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                            onclick="return confirm('Hapus layanan ini? (Data survei terkait akan tetap tersimpan)')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            @endif
                         </td>
                     </tr>
                     @empty

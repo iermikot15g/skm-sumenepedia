@@ -17,56 +17,39 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | PUBLIC ROUTES - Survei Kepuasan Masyarakat
 |--------------------------------------------------------------------------
-| Halaman yang dapat diakses oleh masyarakat umum tanpa login.
 */
-
-// Halaman beranda
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
-// Alur survei publik
 Route::prefix('survey')->name('survey.')->group(function () {
-    // Halaman pilih OPD
     Route::get('/opd', [SurveyController::class, 'selectOpd'])->name('select-opd');
-    
-    // Halaman identitas responden
     Route::get('/identitas/{unitId}', [SurveyController::class, 'identitas'])->name('identitas');
     Route::post('/identitas/{unitId}', [SurveyController::class, 'storeIdentitas'])->name('store-identitas');
-    
-    // Halaman pertanyaan survei
     Route::get('/pertanyaan/{surveiId}', [SurveyController::class, 'pertanyaan'])->name('pertanyaan');
     Route::post('/pertanyaan/{surveiId}', [SurveyController::class, 'storeJawaban'])->name('store-jawaban');
-    
-    // Halaman selesai / terima kasih
     Route::get('/selesai', [SurveyController::class, 'selesai'])->name('selesai');
 });
 
-// Route AJAX untuk mendapatkan layanan berdasarkan OPD
 Route::get('/get-layanan/{unitId}', [SurveyController::class, 'getLayanan'])->name('get-layanan');
 
 /*
 |--------------------------------------------------------------------------
-| AUTH ROUTES - Login & Logout
+| AUTH ROUTES
 |--------------------------------------------------------------------------
-| Halaman autentikasi untuk akses dashboard admin.
 */
-
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN ROUTES - Dashboard dan Manajemen
+| ADMIN ROUTES
 |--------------------------------------------------------------------------
-| Semua route di bawah ini memerlukan autentikasi dan dibatasi berdasarkan role.
 */
-
 Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
     
     // ================================================================
-    // DASHBOARD UTAMA (Semua Role)
+    // DASHBOARD (Semua Role)
     // ================================================================
-    // Semua role bisa akses dashboard, tetapi konten berbeda sesuai role
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
     // ================================================================
@@ -94,20 +77,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('audit-logs.show');
         
         // ---- Layanan (Super Admin untuk pengawasan) ----
-        // Super Admin bisa melihat dan menghapus semua layanan
+        // Super Admin: READ + DELETE (tidak bisa create/update)
         Route::get('layanan', [LayananController::class, 'index'])->name('layanan.index');
         Route::get('layanan/{layanan}', [LayananController::class, 'show'])->name('layanan.show');
         Route::delete('layanan/{layanan}', [LayananController::class, 'destroy'])->name('layanan.destroy');
     });
     
     // ================================================================
-    // ADMIN UNIT & SUPER ADMIN
+    // ADMIN UNIT (CRUD Layanan di Unitnya Sendiri)
     // ================================================================
-    Route::middleware(['role:super_admin,admin_unit'])->group(function () {
+    Route::middleware(['role:admin_unit'])->group(function () {
         
         // ---- Manajemen Layanan (CRUD per OPD sendiri) ----
-        // Admin Unit hanya bisa mengelola layanan di unitnya sendiri
-        // Super Admin bisa mengelola semua (tapi lebih baik via route terpisah di atas)
         Route::prefix('layanan')->group(function () {
             Route::get('/', [LayananController::class, 'index'])->name('layanan.index');
             Route::get('/create', [LayananController::class, 'create'])->name('layanan.create');
@@ -118,7 +99,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             Route::patch('/{layanan}/toggle', [LayananController::class, 'toggleActive'])->name('layanan.toggle');
         });
         
-        // ---- Data Survei (untuk unitnya sendiri) ----
+        // ---- Data Survei (unitnya sendiri) ----
         Route::prefix('data-survei')->group(function () {
             Route::get('/', [DataSurveiController::class, 'index'])->name('data-survei');
             Route::get('/{survei}', [DataSurveiController::class, 'show'])->name('data-survei.show');
@@ -126,7 +107,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             Route::get('/{survei}/export-pdf', [DataSurveiController::class, 'exportPdf'])->name('data-survei.export-pdf');
         });
         
-        // ---- Laporan (untuk unitnya sendiri) ----
+        // ---- Laporan (unitnya sendiri) ----
         Route::prefix('reports')->group(function () {
             Route::get('/', [ReportController::class, 'index'])->name('reports.index');
             Route::post('/generate', [ReportController::class, 'generate'])->name('reports.generate');
